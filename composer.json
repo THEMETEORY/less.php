@@ -18,9 +18,9 @@
 			"homepage": "https://github.com/Mordred"
 		},
 		{
-            "name": "THEMETEORY",
-            "homepage": "http://themeteory.com"
-        }
+            		"name": "THEMETEORY",
+            		"homepage": "http://themeteory.com"
+        	}
 	],
 	"require": {
 		"PHP" : ">=5.2"
