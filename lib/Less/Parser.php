@@ -10,7 +10,7 @@ require_once( dirname(__FILE__).'/Cache.php');
  *
  */
 class Less_Parser{
-public function getCss
+
 
 	/**
 	 * Default parser options
