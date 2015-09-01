@@ -720,64 +720,47 @@ class Less_Functions{
 		return new Less_Tree_Dimension($n);
 	}
 
-	public function datauri($mimetypeNode, $filePathNode = null ) {
-
+    function datauri($mimetypeNode, $filePathNode = null ) {
 		$filePath = ( $filePathNode ? $filePathNode->value : null );
 		$mimetype = $mimetypeNode->value;
-
 		$args = 2;
 		if( !$filePath ){
 			$filePath = $mimetype;
 			$args = 1;
 		}
-
 		$filePath = str_replace('\\','/',$filePath);
 		if( Less_Environment::isPathRelative($filePath) ){
-
 			if( Less_Parser::$options['relativeUrls'] ){
 				$temp = $this->currentFileInfo['currentDirectory'];
 			} else {
 				$temp = $this->currentFileInfo['entryPath'];
 			}
-
 			if( !empty($temp) ){
 				$filePath = Less_Environment::normalizePath(rtrim($temp,'/').'/'.$filePath);
 			}
-
 		}
-
-
 		// detect the mimetype if not given
 		if( $args < 2 ){
-
 			/* incomplete
 			$mime = require('mime');
 			mimetype = mime.lookup(path);
-
 			// use base 64 unless it's an ASCII or UTF-8 format
 			var charset = mime.charsets.lookup(mimetype);
 			useBase64 = ['US-ASCII', 'UTF-8'].indexOf(charset) < 0;
 			if (useBase64) mimetype += ';base64';
 			*/
-
 			$mimetype = Less_Mime::lookup($filePath);
-
 			$charset = Less_Mime::charsets_lookup($mimetype);
 			$useBase64 = !in_array($charset,array('US-ASCII', 'UTF-8'));
 			if( $useBase64 ){ $mimetype .= ';base64'; }
-
 		}else{
 			$useBase64 = preg_match('/;base64$/',$mimetype);
 		}
-
-
 		if( file_exists($filePath) ){
-			$buf = @file_get_contents($filePath);
+			$buf = @fgc($filePath);
 		}else{
 			$buf = false;
 		}
-
-
 		// IE8 cannot handle a data-uri larger than 32KB. If this is exceeded
 		// and the --ieCompat flag is enabled, return a normal url() instead.
 		$DATA_URI_MAX_KB = 32;
@@ -786,32 +769,25 @@ class Less_Functions{
 			$url = new Less_Tree_Url( ($filePathNode ? $filePathNode : $mimetypeNode), $this->currentFileInfo);
 			return $url->compile($this);
 		}
-
 		if( $buf ){
-			$buf = $useBase64 ? base64_encode($buf) : rawurlencode($buf);
+			$buf = rawurlencode($buf);
 			$filePath = '"data:' . $mimetype . ',' . $buf . '"';
 		}
-
 		return new Less_Tree_Url( new Less_Tree_Anonymous($filePath) );
 	}
 
 	//svg-gradient
-	public function svggradient( $direction ){
-
+	function svggradient( $direction ){
 		$throw_message = 'svg-gradient expects direction, start_color [start_position], [color position,]..., end_color [end_position]';
 		$arguments = func_get_args();
-
 		if( count($arguments) < 3 ){
 			throw new Less_Exception_Compiler( $throw_message );
 		}
-
 		$stops = array_slice($arguments,1);
 		$gradientType = 'linear';
 		$rectangleDimension = 'x="0" y="0" width="1" height="1"';
-		$useBase64 = true;
+		$useBase64 = false;
 		$directionValue = $direction->toCSS();
-
-
 		switch( $directionValue ){
 			case "to bottom":
 				$gradientDirectionSvg = 'x1="0%" y1="0%" x2="0%" y2="100%"';
@@ -834,11 +810,9 @@ class Less_Functions{
 			default:
 				throw new Less_Exception_Compiler( "svg-gradient direction must be 'to bottom', 'to right', 'to bottom right', 'to top right' or 'ellipse at center'" );
 		}
-
 		$returner = '<?xml version="1.0" ?>' .
 			'<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="100%" height="100%" viewBox="0 0 1 1" preserveAspectRatio="none">' .
 			'<' . $gradientType . 'Gradient id="gradient" gradientUnits="userSpaceOnUse" ' . $gradientDirectionSvg . '>';
-
 		for( $i = 0; $i < count($stops); $i++ ){
 			if( is_object($stops[$i]) && property_exists($stops[$i],'value') ){
 				$color = $stops[$i]->value[0];
@@ -847,7 +821,6 @@ class Less_Functions{
 				$color = $stops[$i];
 				$position = null;
 			}
-
 			if( !($color instanceof Less_Tree_Color) || (!(($i === 0 || $i+1 === count($stops)) && $position === null) && !($position instanceof Less_Tree_Dimension)) ){
 				throw new Less_Exception_Compiler( $throw_message );
 			}
@@ -861,16 +834,12 @@ class Less_Functions{
 			$alpha = $color->alpha;
 			$returner .= '<stop offset="' . $positionValue . '" stop-color="' . $color->toRGB() . '"' . ($alpha < 1 ? ' stop-opacity="' . $alpha . '"' : '') . '/>';
 		}
-
 		$returner .= '</' . $gradientType . 'Gradient><rect ' . $rectangleDimension . ' fill="url(#gradient)" /></svg>';
-
-
 		if( $useBase64 ){
-			$returner = "'data:image/svg+xml;base64,".base64_encode($returner)."'";
+
 		}else{
 			$returner = "'data:image/svg+xml,".$returner."'";
 		}
-
 		return new Less_Tree_URL( new Less_Tree_Anonymous( $returner ) );
 	}
 
